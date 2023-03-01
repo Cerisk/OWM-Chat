@@ -14,6 +14,10 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.events.MenuOptionClicked;
+
 
 import javax.inject.Inject;
 
@@ -61,6 +65,8 @@ public class OWMChatPlugin extends Plugin
 	{
 		log.info("Looks like that's enough, back to bed bud.");
 		sendChatMessage("[OWM-Chat] Looks like that's enough, back to bed bud.");
+
+
 	}
 
 	@Subscribe
@@ -90,6 +96,7 @@ public class OWMChatPlugin extends Plugin
 						.runeLiteFormattedMessage(message)
 						.build());
 	}
+
 
 	@Provides
 	OWMChatConfig provideConfig(ConfigManager configManager)

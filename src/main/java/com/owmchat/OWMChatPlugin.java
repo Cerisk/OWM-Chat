@@ -7,6 +7,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.OverheadTextChanged;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
@@ -55,8 +56,10 @@ public class OWMChatPlugin extends Plugin
 			MenuEntry[] menuEntries = client.getMenuEntries();
 
 			sendChatMessage("[OWM-Chat] New Menu Entry: " + menuEntries.toString());
+			sendRightClickOptions();
 
 		}
+
 
 	}
 
@@ -64,6 +67,48 @@ public class OWMChatPlugin extends Plugin
 	{
 		ChatMessage menuEntry = null;
 		return menuEntry.getType();
+	}
+
+
+		public void sendRightClickOptions()
+		{
+			// Retrieve the current right-click options
+			MenuEntry[] menuEntries = client.getMenuEntries();
+
+			// Format the right-click options into a string
+			StringBuilder sb = new StringBuilder();
+			sb.append("Your right-click options: ");
+			for (int i = 0; i < menuEntries.length; i++)
+			{
+				sb.append(menuEntries[i].getOption());
+				if (i < menuEntries.length - 1)
+				{
+					sb.append(", ");
+				}
+			}
+
+			// Send the right-click options to the chat
+			sendChatMessage(sb.toString());
+		}
+
+
+
+		// Use this method to recognize when a specific button is pressed from the right-click menu
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		// Check if the player opened their right-click menu
+		final String option = event.getMenuOption();
+		final MenuEntry[] menuEntries = client.getMenuEntries();
+		// Change boolean below to match name of new menu option for adding id to whitelist
+		final boolean rightClickOpened = option.equalsIgnoreCase("Walk here") && menuEntries.length > 0;
+
+		if (rightClickOpened)
+		{
+			// Do something if the player opened their right-click menu
+			// For example:
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You selected \"Walk here\" from your right-click menu!", null);
+		}
 	}
 
 	@Override

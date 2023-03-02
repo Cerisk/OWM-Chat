@@ -2,8 +2,11 @@ package com.owmchat;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
-import net.runelite.api.events.*;
+import net.runelite.api.Actor;
+import net.runelite.api.ChatMessageType;
+import net.runelite.api.Client;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.OverheadTextChanged;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
@@ -40,13 +43,20 @@ public class OWMChatPlugin extends Plugin
 	private Actor actor = null;
 	private String lastNPCText = "";
 
-
 	@Override
-	protected void startUp() throws Exception
-	{
+	protected void startUp() throws Exception {
 		log.info("[OWM-Chat] Plugin Initialized Successfully");
 		sendChatMessage("[OWM-Chat] Plugin Initialized Successfully");
 
+
+		//MenuEntry[] menuEntries = new MenuEntry[0];
+		if (client != null) {
+			// Stores menu entries in a string array
+			MenuEntry[] menuEntries = client.getMenuEntries();
+
+			sendChatMessage("[OWM-Chat] New Menu Entry: " + menuEntries.toString());
+
+		}
 
 	}
 

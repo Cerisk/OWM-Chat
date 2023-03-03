@@ -105,17 +105,15 @@ public class OWMChatPlugin extends Plugin
 		final String option = event.getMenuOption();
 		final MenuEntry[] menuEntries = client.getMenuEntries();
 		// Change boolean below to match name of new menu option for adding id to whitelist
-		final boolean rightClickOpened = option.equalsIgnoreCase("Cancel") && menuEntries.length > 0;
+		final boolean rightClickOpened = option.equalsIgnoreCase("Walk here") && menuEntries.length > 0;
 
 		if (rightClickOpened)
 		{
 			// Do something if the player opened their right-click menu
 			// For example:
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You selected \"Cancel\" from your right-click menu!", null);
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You selected \"Walk here\" from your right-click menu!", null);
 		}
 	}
-
-
 
 	@Override
 	protected void shutDown() throws Exception

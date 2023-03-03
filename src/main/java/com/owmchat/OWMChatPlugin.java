@@ -2,11 +2,13 @@ package com.owmchat;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
+import net.runelite.api.Actor;
+import net.runelite.api.ChatMessageType;
+import net.runelite.api.Client;
+import net.runelite.api.MenuEntry;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.OverheadTextChanged;
-import net.runelite.api.widgets.Widget;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -21,9 +23,7 @@ import net.runelite.api.MenuEntry;
 import net.runelite.api.events.MenuOptionClicked;
 
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
-import java.util.function.Consumer;
 
 
 @Slf4j
@@ -54,264 +54,13 @@ public class OWMChatPlugin extends Plugin
 		sendChatMessage("[OWM-Chat] Plugin Initialized Successfully");
 
 
-
-
-
-		MenuEntry newOption = new MenuEntry() {
-			/**
-			 * @return
-			 */
-			@Override
-			public String getOption() {
-				return null;
-			}
-
-			/**
-			 * @param option
-			 * @return
-			 */
-			@Override
-			public MenuEntry setOption(String option) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public String getTarget() {
-				return null;
-			}
-
-			/**
-			 * @param target
-			 * @return
-			 */
-			@Override
-			public MenuEntry setTarget(String target) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public int getIdentifier() {
-				return 0;
-			}
-
-			/**
-			 * @param identifier
-			 * @return
-			 */
-			@Override
-			public MenuEntry setIdentifier(int identifier) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public MenuAction getType() {
-				return null;
-			}
-
-			/**
-			 * @param type
-			 * @return
-			 */
-			@Override
-			public MenuEntry setType(MenuAction type) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public int getParam0() {
-				return 0;
-			}
-
-			/**
-			 * @param param0
-			 * @return
-			 */
-			@Override
-			public MenuEntry setParam0(int param0) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public int getParam1() {
-				return 0;
-			}
-
-			/**
-			 * @param param1
-			 * @return
-			 */
-			@Override
-			public MenuEntry setParam1(int param1) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public boolean isForceLeftClick() {
-				return false;
-			}
-
-			/**
-			 * @param forceLeftClick
-			 * @return
-			 */
-			@Override
-			public MenuEntry setForceLeftClick(boolean forceLeftClick) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public boolean isDeprioritized() {
-				return false;
-			}
-
-			/**
-			 * @param deprioritized
-			 * @return
-			 */
-			@Override
-			public MenuEntry setDeprioritized(boolean deprioritized) {
-				return null;
-			}
-
-			/**
-			 * @param callback
-			 * @return
-			 */
-			@Override
-			public MenuEntry onClick(Consumer<MenuEntry> callback) {
-				return null;
-			}
-
-			/**
-			 * @param parent
-			 * @return
-			 */
-			@Override
-			public MenuEntry setParent(MenuEntry parent) {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Nullable
-			@Override
-			public MenuEntry getParent() {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public boolean isItemOp() {
-				return false;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public int getItemOp() {
-				return 0;
-			}
-
-			/**
-			 * @return
-			 */
-			@Override
-			public int getItemId() {
-				return 0;
-			}
-
-			/**
-			 * @return
-			 */
-			@Nullable
-			@Override
-			public Widget getWidget() {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Nullable
-			@Override
-			public NPC getNpc() {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Nullable
-			@Override
-			public Player getPlayer() {
-				return null;
-			}
-
-			/**
-			 * @return
-			 */
-			@Nullable
-			@Override
-			public Actor getActor() {
-				return null;
-			}
-		};
-		newOption.setOption("My Option"); // set the text of the menu option
-		newOption.setTarget(""); // set the target to empty string if it doesn't apply
-		newOption.setType(MenuAction.RUNELITE); // set the type of the action
-		newOption.setIdentifier(1); // set an identifier for the action (can be any int value)
-
-		MenuEntry[] menuEntries = client.getMenuEntries();
-
-		if (menuEntries.length > 0) {
-			menuEntries[0].setForceLeftClick(true);
-			menuEntries[0].setDeprioritized(true);
-		}
-
-		MenuEntry[] newMenuEntries = client.getMenuEntries();
-		if (newMenuEntries.length > 0) {
-			newMenuEntries[newMenuEntries.length - 1] = newOption;
-		}
-
-		client.setMenuEntries(newMenuEntries);
-
-
-
-
-
 		//MenuEntry[] menuEntries = new MenuEntry[0];
 		if (client != null) {
 			// Stores menu entries in a string array
+			MenuEntry[] menuEntries = client.getMenuEntries();
 
 			sendChatMessage("[OWM-Chat] New Menu Entry: " + menuEntries.toString());
 			sendRightClickOptions();
-
-
 
 		}
 

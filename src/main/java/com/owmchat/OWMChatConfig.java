@@ -14,7 +14,9 @@ public interface OWMChatConfig extends Config
 			description = "Login and put some specs on to see the chat old man! Code used from several plugins (ie Emoji, NPC Chat Overhead Dialogue)"
 	)
 
-	default boolean enableChatDialog() { return false; }
+	default void enableChatDialog() {
+
+    }
 
     @ConfigItem(
             position = 7,

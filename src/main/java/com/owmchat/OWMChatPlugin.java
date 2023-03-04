@@ -6,14 +6,12 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
-import net.runelite.api.widgets.Widget;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.game.npcoverlay.HighlightedNpc;
 import net.runelite.client.game.npcoverlay.NpcOverlayService;
@@ -21,19 +19,13 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.client.plugins.groundmarkers.GroundMarkerOverlay;
-import net.runelite.client.ui.overlay.OverlayManager;
-import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.Text;
 import net.runelite.client.util.WildcardMatcher;
 
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
-import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 
@@ -66,7 +58,7 @@ public class OWMChatPlugin extends Plugin {
 	private String lastNPCText = "";
 
 
-	private List<Integer> npcWhitelist = new ArrayList<>();
+	private List<NPC> npcWhitelist = new ArrayList<NPC>();
 
 
 	@Override
@@ -76,16 +68,17 @@ public class OWMChatPlugin extends Plugin {
 
 
 		sendChatMessage("[OWM-Chat] New Menu Entry: ");
-		sendRightClickOptions();
 		getWhitelist();
 		rebuild();
 
 	}
 
 
-	private void addToWhitelist(int npcId) {
-		if (!npcWhitelist.contains(npcId)) {
-			npcWhitelist.add(npcId);
+	private void addToWhitelist(String npcName) {
+		whitelist = getWhitelist();
+		if (!getWhitelist().contains(npcName)) {
+
+			getWhitelist().add(npcName);
 		}
 	}
 
@@ -96,23 +89,7 @@ public class OWMChatPlugin extends Plugin {
 	}
 
 
-	public void sendRightClickOptions() {
-		// Retrieve the current right-click options
-		MenuEntry[] menuEntries = client.getMenuEntries();
 
-		// Format the right-click options into a string
-		StringBuilder sb = new StringBuilder();
-		sb.append("Your right-click options: ");
-		for (int i = 0; i < menuEntries.length; i++) {
-			sb.append(menuEntries[i].getOption());
-			if (i < menuEntries.length - 1) {
-				sb.append(", ");
-			}
-		}
-
-		// Send the right-click options to the chat
-		sendChatMessage(sb.toString());
-	}
 
 
 	@Override
@@ -123,6 +100,8 @@ public class OWMChatPlugin extends Plugin {
 
 	}
 
+
+//	Used to build the chat messages NPCs speak overhead
 	@Subscribe
 	public void onOverheadTextChanged(OverheadTextChanged event) {
 
@@ -138,7 +117,7 @@ public class OWMChatPlugin extends Plugin {
 
 	}
 
-
+// Used to build and send the chat messages through to the main OSRS chat box
 	private void sendChatMessage(String chatMessage) {
 		final String message = new ChatMessageBuilder()
 				.append(ChatColorType.HIGHLIGHT)
@@ -159,7 +138,10 @@ public class OWMChatPlugin extends Plugin {
 	}
 
 
+	// Local whitelist in OWMChatPlugin
 	private List<String> whitelist = new ArrayList<>();
+
+	// Used to update and get the whitelist from the Config file
 
 	List<String> getWhitelist() {
 		final String configNpcs = config.getNpcWhitelist();
@@ -171,6 +153,8 @@ public class OWMChatPlugin extends Plugin {
 		return Text.fromCSV(configNpcs);
 	}
 
+
+	// Used to check if an NPC name matches with another NPC name that is on the whitelist
 	private boolean whitelistMatchesNPCName(String npcName) {
 		whitelist = getWhitelist();
 		for (String highlight : whitelist) {
@@ -182,6 +166,84 @@ public class OWMChatPlugin extends Plugin {
 		return false;
 	}
 
+
+	@Getter(AccessLevel.PACKAGE)
+	private final Map<NPC, HighlightedNpc> whitelistedNpc = new HashMap<>();
+
+	private final Function<NPC, HighlightedNpc> isHighlighted = whitelistedNpc::get;
+
+	private NpcOverlayService npcOverlayService;
+	// Used to update and rebuild the plugin on gamestate update
+	void rebuild()
+	{
+		whitelist = getWhitelist();
+		whitelistedNpc.clear();
+
+		if (client.getGameState() != GameState.LOGGED_IN &&
+				client.getGameState() != GameState.LOADING)
+		{
+			// NPCs are still in the client after logging out,
+			// but we don't want to highlight those.
+			return;
+		}
+
+		for (NPC npc : client.getNpcs())
+		{
+			final String npcName = npc.getName();
+
+			if (npcName == null)
+			{
+				continue;
+			}
+
+		}
+
+		npcOverlayService.rebuild();
+	}
+
+
+
+
+/* Possible edition later to add right-click menu option for whitelisting NPCs
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event) {
+		final MenuEntry menuEntry = event.getMenuEntry();
+		final MenuAction menuAction = menuEntry.getType();
+		final NPC npc = menuEntry.getNpc();
+
+		final String npcName = npc.getName();
+
+		String option = event.getMenuOption();
+		final MenuEntry[] menuEntries = client.getMenuEntries();
+		final boolean rightClickOpened = option.equalsIgnoreCase(TAG) && menuEntries.length > 0;
+		if (rightClickOpened)
+		{
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You are selecting \"Whitelist\" from your right-click menu!" + npcName, null);
+			addToWhitelist(npcName);
+
+		}
+	}
+
+		public void sendRightClickOptions() {
+		// Retrieve the current right-click options
+		MenuEntry[] menuEntries = client.getMenuEntries();
+
+		// Format the right-click options into a string
+		StringBuilder sb = new StringBuilder();
+		sb.append("Your right-click options: ");
+		for (int i = 0; i < menuEntries.length; i++) {
+			sb.append(menuEntries[i].getOption());
+			if (i < menuEntries.length - 1) {
+				sb.append(", ");
+			}
+		}
+
+		// Send the right-click options to the chat
+		sendChatMessage(sb.toString());
+	}
+*/
+
+/* Possible addition later, this section adds the "Whitelist" menu option when holding shift on NPC
 	private final Set<Integer> npcTags = new HashSet<>();
 	private static final String TAG = "Whitelist";
 	private static final String UNTAG = "Un-Whitelist";
@@ -196,13 +258,13 @@ public class OWMChatPlugin extends Plugin {
 		{
 			return;
 		}
-		final String option = menuEntry.getOption();
-		final MenuEntry[] menuEntries = client.getMenuEntries();
-		final boolean rightClickOpened = option.equalsIgnoreCase("Whitelist") && menuEntries.length > 0;
+
 
 		if (menuAction == MenuAction.EXAMINE_NPC && client.isKeyPressed(KeyCode.KC_SHIFT)) {
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You are selecting \"Whitelist\" from your right-click menu!", null);
+
 			// Add tag and tag-all options
+
+
 			if (npc.getName() == null) {
 				return;
 			}
@@ -260,46 +322,7 @@ public class OWMChatPlugin extends Plugin {
 
 
 	}
-
-
-	@Getter(AccessLevel.PACKAGE)
-	private final Map<NPC, HighlightedNpc> whitelistedNpc = new HashMap<>();
-
-
-	private final Function<NPC, HighlightedNpc> isHighlighted = whitelistedNpc::get;
-
-	private NpcOverlayService npcOverlayService;
-
-
-
-
-	void rebuild()
-	{
-		whitelist = getWhitelist();
-		whitelistedNpc.clear();
-
-		if (client.getGameState() != GameState.LOGGED_IN &&
-				client.getGameState() != GameState.LOADING)
-		{
-			// NPCs are still in the client after logging out,
-			// but we don't want to highlight those.
-			return;
-		}
-
-		for (NPC npc : client.getNpcs())
-		{
-			final String npcName = npc.getName();
-
-			if (npcName == null)
-			{
-				continue;
-			}
-
-		}
-
-		npcOverlayService.rebuild();
-	}
-
+*/
 
 
 

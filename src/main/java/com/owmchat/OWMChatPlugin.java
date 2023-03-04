@@ -2,41 +2,53 @@ package com.owmchat;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Actor;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.MenuEntry;
+import net.runelite.api.*;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.OverheadTextChanged;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.client.plugins.groundmarkers.GroundMarkerOverlay;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
 
 @Slf4j
 @PluginDescriptor(
 		name = "Old Wise Man Chat"
 )
+
+
+
 public class OWMChatPlugin extends Plugin
 {
+
 	@Inject
 	private Client client;
 
 	@Inject
 	private OWMChatConfig config;
+
+	@Inject
+	private ConfigManager configManager;
 
 	@Inject
 	private ChatMessageManager chatMessageManager;
@@ -45,8 +57,13 @@ public class OWMChatPlugin extends Plugin
 	private NPCManager npcManager;
 
 
+
 	private Actor actor = null;
 	private String lastNPCText = "";
+
+
+	private List<Integer> npcWhitelist = new ArrayList<>();
+
 
 	@Override
 	protected void startUp() throws Exception {
@@ -54,18 +71,33 @@ public class OWMChatPlugin extends Plugin
 		sendChatMessage("[OWM-Chat] Plugin Initialized Successfully");
 
 
-		//MenuEntry[] menuEntries = new MenuEntry[0];
-		if (client != null) {
-			// Stores menu entries in a string array
-			MenuEntry[] menuEntries = client.getMenuEntries();
 
-			sendChatMessage("[OWM-Chat] New Menu Entry: " + menuEntries.toString());
-			sendRightClickOptions();
-
-		}
-
-
+		sendChatMessage("[OWM-Chat] New Menu Entry: ");
+		sendRightClickOptions();
 	}
+
+
+
+
+	private void addToWhitelist(int npcId)
+	{
+		if (!npcWhitelist.contains(npcId))
+		{
+			npcWhitelist.add(npcId);
+		}
+	}
+
+	private void removeFromWhitelist(int npcId)
+	{
+		npcWhitelist.removeIf(id -> id == npcId);
+	}
+
+
+	private boolean isInWhitelist(int npcId)
+	{
+		return getNpcWhitelist.contains(npcId);
+	}
+
 
 	private ChatMessageType getMenuOption()
 	{
@@ -105,13 +137,13 @@ public class OWMChatPlugin extends Plugin
 		final String option = event.getMenuOption();
 		final MenuEntry[] menuEntries = client.getMenuEntries();
 		// Change boolean below to match name of new menu option for adding id to whitelist
-		final boolean rightClickOpened = option.equalsIgnoreCase("Walk here") && menuEntries.length > 0;
+		final boolean rightClickOpened = option.equalsIgnoreCase("Cancel") && menuEntries.length > 0;
 
 		if (rightClickOpened)
 		{
 			// Do something if the player opened their right-click menu
 			// For example:
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You selected \"Walk here\" from your right-click menu!", null);
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You selected \"Cancel\" from your right-click menu!", null);
 		}
 	}
 
@@ -132,8 +164,18 @@ public class OWMChatPlugin extends Plugin
 		final String bot = event.getActor().getName();
 		final String message = event.getOverheadText();
 
-		sendChatMessage(bot + ": " + message);
-
+		Actor actor = event.getActor();
+		String npcName = actor.getName();
+		String overheadText = event.getOverheadText();
+		if (actor instanceof NPC) {
+			int npcId = ((NPC) actor).getId();
+			// Check if npcId is whitelisted
+			if (isInWhitelist(npcId))
+			{
+				// Do something with the NPC
+				sendChatMessage(bot + ": " + message);
+			}
+		}
 
 	}
 
@@ -158,4 +200,13 @@ public class OWMChatPlugin extends Plugin
 	{
 		return configManager.getConfig(OWMChatConfig.class);
 	}
+
+	@Provides
+	OWMChatConfig getNpcWhitelist(ConfigManager configManager)
+	{
+		return configManager.getConfig(OWMChatConfig.class);
+	}
+
+
+
 }

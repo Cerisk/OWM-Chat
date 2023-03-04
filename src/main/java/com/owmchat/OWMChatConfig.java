@@ -1,6 +1,5 @@
 package com.owmchat;
 
-import net.runelite.api.NpcID;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -23,7 +22,7 @@ public interface OWMChatConfig extends Config
             name = "Add NPCs to Whitelist",
             description = "List of NPC names to Whitelist. Format: (NPC), (NPC)"
     )
-    default String getNpcWhitelist(String id)
+    default String getNpcWhitelist()
     {
         return "";
     }

@@ -1,11 +1,11 @@
 package com.owmchat;
 
 import com.google.inject.Provides;
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.events.OverheadTextChanged;
+import net.runelite.api.events.*;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
@@ -15,20 +15,26 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.NPCManager;
+import net.runelite.client.game.npcoverlay.HighlightedNpc;
+import net.runelite.client.game.npcoverlay.NpcOverlayService;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.plugins.groundmarkers.GroundMarkerOverlay;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ColorUtil;
+import net.runelite.client.util.Text;
+import net.runelite.client.util.WildcardMatcher;
 
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 
 @Slf4j
@@ -38,8 +44,7 @@ import java.util.function.Consumer;
 
 
 
-public class OWMChatPlugin extends Plugin
-{
+public class OWMChatPlugin extends Plugin {
 
 	@Inject
 	private Client client;
@@ -57,7 +62,6 @@ public class OWMChatPlugin extends Plugin
 	private NPCManager npcManager;
 
 
-
 	private Actor actor = null;
 	private String lastNPCText = "";
 
@@ -71,85 +75,48 @@ public class OWMChatPlugin extends Plugin
 		sendChatMessage("[OWM-Chat] Plugin Initialized Successfully");
 
 
-
 		sendChatMessage("[OWM-Chat] New Menu Entry: ");
 		sendRightClickOptions();
+		getWhitelist();
+		rebuild();
+
 	}
 
 
-
-
-	private void addToWhitelist(int npcId)
-	{
-		if (!npcWhitelist.contains(npcId))
-		{
+	private void addToWhitelist(int npcId) {
+		if (!npcWhitelist.contains(npcId)) {
 			npcWhitelist.add(npcId);
 		}
 	}
 
-	private void removeFromWhitelist(int npcId)
-	{
-		npcWhitelist.removeIf(id -> id == npcId);
-	}
 
-
-	private boolean isInWhitelist(int npcId)
-	{
-		return getNpcWhitelist.contains(npcId);
-	}
-
-
-	private ChatMessageType getMenuOption()
-	{
+	private ChatMessageType getMenuOption() {
 		ChatMessage menuEntry = null;
 		return menuEntry.getType();
 	}
 
 
-		public void sendRightClickOptions()
-		{
-			// Retrieve the current right-click options
-			MenuEntry[] menuEntries = client.getMenuEntries();
+	public void sendRightClickOptions() {
+		// Retrieve the current right-click options
+		MenuEntry[] menuEntries = client.getMenuEntries();
 
-			// Format the right-click options into a string
-			StringBuilder sb = new StringBuilder();
-			sb.append("Your right-click options: ");
-			for (int i = 0; i < menuEntries.length; i++)
-			{
-				sb.append(menuEntries[i].getOption());
-				if (i < menuEntries.length - 1)
-				{
-					sb.append(", ");
-				}
+		// Format the right-click options into a string
+		StringBuilder sb = new StringBuilder();
+		sb.append("Your right-click options: ");
+		for (int i = 0; i < menuEntries.length; i++) {
+			sb.append(menuEntries[i].getOption());
+			if (i < menuEntries.length - 1) {
+				sb.append(", ");
 			}
-
-			// Send the right-click options to the chat
-			sendChatMessage(sb.toString());
 		}
 
-
-
-		// Use this method to recognize when a specific button is pressed from the right-click menu
-	@Subscribe
-	public void onMenuOptionClicked(MenuOptionClicked event)
-	{
-		// Check if the player opened their right-click menu
-		final String option = event.getMenuOption();
-		final MenuEntry[] menuEntries = client.getMenuEntries();
-		// Change boolean below to match name of new menu option for adding id to whitelist
-		final boolean rightClickOpened = option.equalsIgnoreCase("Cancel") && menuEntries.length > 0;
-
-		if (rightClickOpened)
-		{
-			// Do something if the player opened their right-click menu
-			// For example:
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You selected \"Cancel\" from your right-click menu!", null);
-		}
+		// Send the right-click options to the chat
+		sendChatMessage(sb.toString());
 	}
 
+
 	@Override
-	protected void shutDown() throws Exception
-	{
+	protected void shutDown() throws Exception {
 		log.info("Looks like that's enough, back to bed bud.");
 		sendChatMessage("[OWM-Chat] Looks like that's enough, back to bed bud.");
 
@@ -157,31 +124,22 @@ public class OWMChatPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onOverheadTextChanged(OverheadTextChanged event)
-	{
+	public void onOverheadTextChanged(OverheadTextChanged event) {
 
 		// log.info("animation changed for: " + otChanged.getActor().getName());
 		final String bot = event.getActor().getName();
 		final String message = event.getOverheadText();
 
-		Actor actor = event.getActor();
-		String npcName = actor.getName();
-		String overheadText = event.getOverheadText();
-		if (actor instanceof NPC) {
-			int npcId = ((NPC) actor).getId();
-			// Check if npcId is whitelisted
-			if (isInWhitelist(npcId))
-			{
-				// Do something with the NPC
-				sendChatMessage(bot + ": " + message);
-			}
+		if (whitelistMatchesNPCName(bot)) {
+			// Do something with the NPC
+			sendChatMessage("[OWM-Notification] " + bot + ": " + message);
 		}
+
 
 	}
 
 
-	private void sendChatMessage(String chatMessage)
-	{
+	private void sendChatMessage(String chatMessage) {
 		final String message = new ChatMessageBuilder()
 				.append(ChatColorType.HIGHLIGHT)
 				.append(chatMessage)
@@ -196,16 +154,152 @@ public class OWMChatPlugin extends Plugin
 
 
 	@Provides
-	OWMChatConfig provideConfig(ConfigManager configManager)
-	{
+	OWMChatConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(OWMChatConfig.class);
 	}
 
-	@Provides
-	OWMChatConfig getNpcWhitelist(ConfigManager configManager)
-	{
-		return configManager.getConfig(OWMChatConfig.class);
+
+	private List<String> whitelist = new ArrayList<>();
+
+	List<String> getWhitelist() {
+		final String configNpcs = config.getNpcWhitelist();
+
+		if (configNpcs.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		return Text.fromCSV(configNpcs);
 	}
+
+	private boolean whitelistMatchesNPCName(String npcName) {
+		whitelist = getWhitelist();
+		for (String highlight : whitelist) {
+			if (WildcardMatcher.matches(highlight, npcName)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private final Set<Integer> npcTags = new HashSet<>();
+	private static final String TAG = "Whitelist";
+	private static final String UNTAG = "Un-Whitelist";
+	@Subscribe
+	public void onMenuEntryAdded(MenuEntryAdded event)
+	{
+		final MenuEntry menuEntry = event.getMenuEntry();
+		final MenuAction menuAction = menuEntry.getType();
+		final NPC npc = menuEntry.getNpc();
+
+		if (npc == null)
+		{
+			return;
+		}
+		final String option = menuEntry.getOption();
+		final MenuEntry[] menuEntries = client.getMenuEntries();
+		final boolean rightClickOpened = option.equalsIgnoreCase("Whitelist") && menuEntries.length > 0;
+
+		if (menuAction == MenuAction.EXAMINE_NPC && client.isKeyPressed(KeyCode.KC_SHIFT)) {
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "You are selecting \"Whitelist\" from your right-click menu!", null);
+			// Add tag and tag-all options
+			if (npc.getName() == null) {
+				return;
+			}
+
+
+			final String npcName = npc.getName();
+			final boolean nameMatch = whitelist.stream().anyMatch(npcName::equalsIgnoreCase);
+			final boolean idMatch = npcTags.contains(npc.getIndex());
+			final boolean wildcardMatch = whitelist.stream()
+					.filter(highlight -> !highlight.equalsIgnoreCase(npcName))
+					.anyMatch(highlight -> WildcardMatcher.matches(highlight, npcName));
+			int idx = -1;
+
+			client.createMenuEntry(idx--)
+					.setOption(idMatch ? UNTAG : TAG)
+					.setTarget(event.getTarget())
+					.setIdentifier(event.getIdentifier())
+					.setType(MenuAction.RUNELITE)
+					.onClick(this::tag);
+
+		}
+
+	}
+
+
+	private void tag(MenuEntry menuEntry) {
+		final int id = menuEntry.getIdentifier();
+		final NPC[] cachedNPCs = client.getCachedNPCs();
+		final NPC npc = cachedNPCs[id];
+
+		if (npc == null || npc.getName() == null) {
+			return;
+		}
+
+		if (menuEntry.getOption().equals(TAG) || menuEntry.getOption().equals(UNTAG)) {
+			final boolean removed = npcTags.remove(id);
+
+			if (removed) {
+				if (!whitelistMatchesNPCName(npc.getName())) {
+					npcWhitelist.remove(npc);
+
+				}
+			} else {
+				final String name = npc.getName();
+				final List<String> whitelistedNpcs = new ArrayList<>(whitelist);
+
+				if (!whitelistedNpcs.removeIf(name::equalsIgnoreCase)) {
+					whitelistedNpcs.add(name);
+				}
+
+				// this trips a config change which triggers the overlay rebuild
+				config.setNpcToWhitelist(Text.toCSV(whitelistedNpcs));
+			}
+		}
+
+
+	}
+
+
+	@Getter(AccessLevel.PACKAGE)
+	private final Map<NPC, HighlightedNpc> whitelistedNpc = new HashMap<>();
+
+
+	private final Function<NPC, HighlightedNpc> isHighlighted = whitelistedNpc::get;
+
+	private NpcOverlayService npcOverlayService;
+
+
+
+
+	void rebuild()
+	{
+		whitelist = getWhitelist();
+		whitelistedNpc.clear();
+
+		if (client.getGameState() != GameState.LOGGED_IN &&
+				client.getGameState() != GameState.LOADING)
+		{
+			// NPCs are still in the client after logging out,
+			// but we don't want to highlight those.
+			return;
+		}
+
+		for (NPC npc : client.getNpcs())
+		{
+			final String npcName = npc.getName();
+
+			if (npcName == null)
+			{
+				continue;
+			}
+
+		}
+
+		npcOverlayService.rebuild();
+	}
+
 
 
 
